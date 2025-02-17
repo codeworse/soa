@@ -1,0 +1,102 @@
+specification {
+    element ui {
+        style {
+            shape browser
+            color green
+        }
+
+    }
+    element microservice
+    element queue {
+        style {
+            shape queue
+            color indigo
+        }
+    }
+    element database {
+        style {
+            shape storage
+        }
+    }
+    element microzone {
+        style {
+            opacity 0%
+            border dashed
+        }
+    }
+}
+
+model {
+    ui_server = ui 'UI'
+    ui_server -> api 'send request'
+
+    auth_zone = microzone 'Authentication' {
+        description 'Server for storing user-info and authentication requests'
+        auth = microservice 'Auth service' {
+
+        }
+        db_auth = database 'PostgreSQL' {
+            style {
+                icon https://icons.terrastruct.com/dev%2Fpostgresql.svg
+            }
+        }
+        auth -> db_auth "update/proceed user-data"
+    }
+    stat_zone = microzone 'Statistics' {
+        description 'Service for statistics storage'
+        stat = microservice 'Stat' {
+
+        }
+        db_stat = database 'ClickHouse' {
+            style {
+                icon https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4ibPWLHRn9BMMDC58q_LcYfVrlt6jxG4HHw&s
+            }
+        }
+        stat -> db_stat "store/request analytics data"
+    }
+
+    api_zone = microzone 'API' {
+        description 'Service for request routing'
+        api = microservice 'API' {
+
+        }
+        kafka = queue 'Kafka' {
+
+        } 
+        api -> kafka 'Posting request'
+    }
+
+    actions_zone = microzone 'Actions' {
+        description 'Service for proceeding user-actions(likes, comment, posting)'
+        actions = microservice 'Actions' {
+
+        }
+        db_actions = database 'Cassandra' {
+            icon https://icon.icepanel.io/Technology/png-shadow-512/Apache-Cassandra.png
+        }
+        actions -> db_actions "update/request user actions" 
+    }
+    api_zone.kafka -> stat_zone.stat 'sending request'
+    api_zone.kafka -> auth_zone.auth 'sending request'
+    api_zone.kafka -> actions_zone.actions 'sending request'
+
+
+}
+
+views {
+    view of api_zone {
+        include *
+    }
+    view of actions_zone {
+        include *
+    }
+    view of stat_zone {
+        include *
+    }
+    view of auth_zone {
+        include *
+    }
+    view index {
+        include *
+    }
+}
