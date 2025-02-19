@@ -4,7 +4,6 @@ erDiagram
     USER ||--|| PUBLIC_WALL : posts
     USER ||--|| USER_ACTION : perform
     USER ||--o{ SESSION : logged
-    SESSION }o--|| SESSION_STAT : supports
     USER ||--o{ POST : wrote
     POST ||--o{ COMMENT : contains
     POST ||--|| POST_STAT : supports
@@ -91,14 +90,6 @@ erDiagram
         integer views
         integer replies
         datetime creation_time
-    }
-
-    SESSION_STAT {
-        integer online_sessions
-        integer medium_session_rate
-        integer mean_session_rate
-        integer browser_session
-        integer client_sesion
     }
 
     MEDIA_STAT {
