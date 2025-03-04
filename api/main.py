@@ -9,6 +9,7 @@ app = Flask('api')
 @app.route('/get_info', methods=["GET"])
 @app.route('/set_info', methods=["PUT"])
 @app.route('/logout', methods=["POST"])
+@app.route('/update', methods=["POST"])
 def redirect_auth():
     res = requests.request(url='http://auth_service:5000' + request.path,
                            method=request.method,

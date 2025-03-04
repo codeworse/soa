@@ -16,8 +16,22 @@ class TestAuthentication(unittest.TestCase):
                 "Authorization": f"Bearer {access_token}",
             }
         )
+
         res = requests.get("http://localhost:8002/get_info", headers=headers, json={})
         self.assertEqual(res.status_code, 200)
+
+        res = requests.post("http://localhost:8002/update", headers=headers, json={})
+        self.assertEqual(res.status_code, 200)
+        access_token = json.loads(res.text)["response"]["access_token"]
+        headers.update(
+            {
+                "Authorization": f"Bearer {access_token}",
+            }
+        )
+
+        res = requests.get("http://localhost:8002/get_info", headers=headers, json={})
+        self.assertEqual(res.status_code, 200)
+
         res = requests.post("http://localhost:8002/logout", headers=headers, json={})
         self.assertEqual(res.status_code, 200)
 

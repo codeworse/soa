@@ -34,6 +34,7 @@ def get_db_connection(max_retries=5, delay=2):
 
 
 conn_db = get_db_connection(max_retries=5, delay=5)
+
 @app.route('/signup', methods=["POST"])
 def register():
     data = request.get_json()
@@ -149,5 +150,26 @@ def logout():
     conn_db.commit()
     cursor.close()
     return jsonify(response={"msg": "session was deleted correctly"}), 200
+
+@app.route('/update', methods=["POST"])
+@jwt_required()
+def update_session():
+    session_id = get_jwt_identity()
+    cursor = conn_db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute("SELECT user_id FROM sessions_info WHERE session_id = %s", (session_id,))
+    info = cursor.fetchone()
+    if info is None:
+        cursor.close()
+        return jsonify({"error": "Session was not found"}), 404
+    user_id = info['user_id']
+    cursor.execute("DELETE FROM sessions_info WHERE session_id = %s", (session_id,))
+    cursor.execute("INSERT INTO sessions_info (user_id) VALUES (%s)", (user_id,))
+    conn_db.commit()
+    cursor.execute("SELECT session_id FROM sessions_info WHERE user_id = %s", (user_id,))
+    session_id = cursor.fetchone()['session_id']
+    app.logger.info("session_id: %s", session_id)
+    token = create_access_token(identity=str(session_id))
+    cursor.close()
+    return jsonify({"session_id": session_id, "user_id": info["user_id"], "access_token": token}), 200
 
 app.run(host="0.0.0.0", debug=True)
