@@ -1,0 +1,131 @@
+openapi: 3.0.0
+info:
+  title: Social Network API
+  description: A simple API to manage social network account
+  version: 1.0.0
+servers:
+  - url: http://localhost:8002
+    description: Proxy server
+paths:
+  /signup:
+    post:
+      summary: Proceed registration
+      description: Returns status of signing up
+      responses:
+        '200':
+          description: None
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: An error message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /login:
+    post:
+      summary: Loging into your account
+      description: Returns authentication token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                email:
+                  type: string
+              required:
+                - username
+                - password
+                - email
+      responses:
+        '200':
+          description: Succesful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        '404':
+          description: User was not found or incorrect password
+  /update:
+    post:
+      summary: Updating session
+      description: Returns new authentication token
+      responses:
+        '200':
+          description: Succesful update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        '404':
+          description: Session was not found
+  /get_info:
+    get:
+      summary: Getting info about yourself
+      description: Returns user info
+      responses:
+        '200':
+          description: Succesful request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  first_name:
+                    type: string
+                  second_name:
+                    type: string
+                  birth_date:
+                    type: string
+                  address:
+                    type: string
+                  age:
+                    type: integer
+        '404':
+          description: User was not found
+  /set_info:
+    put:
+      summary: Updating info in user
+      description:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                second_name:
+                  type: string
+                birth_date:
+                  type: string
+                age:
+                  type: integer
+                address:
+                  type: string
+      responses:
+        '200':
+          description: Successful updating
+        '404':
+          description: User was not found
