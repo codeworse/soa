@@ -1,21 +1,19 @@
 version: '3.9'
 
 services:
-  postgres:
-    image: postgres:latest
-    container_name: postgres_db
+  postgres_auth:
+    image: postgres:16
+    container_name: auth_database
     environment:
       POSTGRES_USER: auth_admin
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: auth_db
-      PGDATA: /var/lib/postgresql/data/pgdata
+      PGDATA: /var/lib/postgresql/data/auth_pgdata
       PGPORT: 5433
     ports:
       - "5433:5433"
-    expose:
-      - "5433"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data/pgdata
+      - ./auth_pgdata:/var/lib/postgresql/data/auth_pgdata
       - ./auth/postgresql/schemas/info.sql:/docker-entrypoint-initdb.d/info.sql
     restart: always
     healthcheck:
@@ -23,13 +21,52 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  postgres_action:
+    image: postgres:16
+    container_name: act_database
+    environment:
+      POSTGRES_USER: act_admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: act_db
+      PGDATA: /var/lib/postgresql/data/act_pgdata
+      PGPORT: 5434
+    ports:
+      - "5434:5434"
+    volumes:
+      - ./act_pgdata:/var/lib/postgresql/data/pgdata
+      - ./act/postgresql/schemas/info.sql:/docker-entrypoint-initdb.d/info.sql
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U act_admin -d act_db" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  act:
+    build:
+      context: act
+      dockerfile: Dockerfile
+    container_name: act_service
+    environment:
+      DB_HOST: act_database
+      DB_PORT: 5434
+      DB_NAME: act_db
+      DB_USER: act_admin
+      DB_PASSWORD: admin
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: 50051
+    ports:
+      - "50051:50051"
+    depends_on:
+      - postgres_action
+  
   auth:
     build:
       context: auth
       dockerfile: Dockerfile
     container_name: auth_service
     environment:
-      DB_HOST: postgres_db
+      DB_HOST: auth_database
       DB_PORT: 5433
       DB_NAME: auth_db
       DB_USER: auth_admin
@@ -37,7 +74,7 @@ services:
     ports:
       - "8003:5000"
     depends_on:
-      - postgres
+      - postgres_auth
   api:
     build:
       context: api
@@ -47,4 +84,5 @@ services:
       - "8002:5000"
 
 volumes:
-  pgdata:
+  auth_pgdata:
+  act_pgdata:
