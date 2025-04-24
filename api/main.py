@@ -3,14 +3,87 @@ import requests
 import json
 from proto import act_pb2, act_pb2_grpc
 import grpc
+import uuid
+from datetime import datetime
+from confluent_kafka import Producer
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity
 )
+
+class KafkaProducer:
+    def __init__(self, server):
+        self.producer = Producer({'bootstrap.servers': server})
+        
+    
+    def callback_produce(self, err, msg):
+        if err is not None:
+            print("Message sending failed:", err)
+        else:
+            print("Success sending")
+
+    def send_event(self, topic, data):
+
+        json_data = json.dumps(data)
+        
+        self.producer.produce(
+            topic=topic,
+            value=json_data,
+            callback=self.callback_produce
+        )
+
+        self.producer.flush()
+    
+    def send_registration(self, user_id, date):
+        event = {
+            'event_id': str(uuid.uuid4()),
+            'event_type': 'user_registration',
+            'user_id': user_id,
+            'registration_date': date,
+            'timestamp': datetime.now().isoformat()
+        }   
+        self.send_event('user_registration', event)
+
+    def send_like(self, user_id, post_id):
+        event = {
+            'event_id': str(uuid.uuid4()),
+            'event_type': 'like',
+            'user_id': user_id,
+            'post_id': post_id,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        self.send_event('like', event)
+    
+    def send_view(self, user_id, post_id):
+        event = {
+            'event_id': str(uuid.uuid4()),
+            'event_type': 'view',
+            'user_id': user_id,
+            'post_id': post_id,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        self.send_event('views', event)
+    
+    def send_comment(self, user_id, post_id, comment_id):
+        event = {
+            'event_id': str(uuid.uuid4()),
+            'event_type': 'comment',
+            'user_id': user_id,
+            'post_id': post_id,
+            'comment_id': comment_id,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        self.send_event('comment', event)
+
 
 app = Flask('api')
 with open("secret_key.key") as f:
     app.config["JWT_SECRET_KEY"] = f.readline()
 jwt = JWTManager(app)
+
+kafka_producer = KafkaProducer('kafka:9092')
 
 @app.route('/login', methods=["POST"])
 @app.route('/signup', methods=["POST"])
@@ -123,5 +196,41 @@ def get_post_list():
         out_json.append(post_to_dict(post))
     return jsonify(response=out_json), 200
 
+@app.route('/event/user_registration', methods=["POST"])
+def registration_event():
+    try:
+        data = request.get_json()
+        kafka_producer.send_registration(data.get("user_id"), data.get("date"))
+    except:
+        return jsonify(response="Some error"), 500
+    return jsonify(response="OK"), 200
+
+
+@app.route('/event/like', methods=["POST"])
+def like_event():
+    try:
+        data = request.get_json()
+        kafka_producer.send_like(data.get("user_id"), data.get("post_id"))
+    except:
+        return jsonify(response="Some error"), 500
+    return jsonify(response="OK"), 200
+
+@app.route('/event/view', methods=["POST"])
+def view_event():
+    try:
+        data = request.get_json()
+        kafka_producer.send_view(data.get("user_id"), data.get("post_id"))
+    except:
+        return jsonify(response="Some error"), 500
+    return jsonify(response="OK"), 200
+
+@app.route('/event/comment', methods=["POST"])
+def comment_event():
+    try:
+        data = request.get_json()
+        kafka_producer.send_comment(data.get("user_id"), data.get("post_id"), data.get("comment_id"))
+    except:
+        return jsonify(response="Some error"), 500
+    return jsonify(response="OK"), 200
 
 app.run(host="0.0.0.0", debug=True)

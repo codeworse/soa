@@ -144,5 +144,23 @@ class TestPost(unittest.TestCase):
 
         res = requests.get("http://localhost:8002/post/get", headers=headers, json=post_id_json)
         self.assertNotEqual(res.status_code, 200)
+class TestKafka(unittest.TestCase):
+    def test_kafka_events(self):
+        headers = requests.utils.default_headers()
+        event_data = {"user_id": "id", "date": "date"}
+        res = requests.post("http://localhost:8002/event/user_registration", headers=headers, json=event_data)
+        self.assertEqual(res.status_code, 200)
+
+        event_data = {"user_id": "user_id", "post_id": "post_id"}
+        res = requests.post("http://localhost:8002/event/like", headers=headers, json=event_data)
+        self.assertEqual(res.status_code, 200)
+
+        event_data = {"user_id": "user_id", "post_id": "post_id"}
+        res = requests.post("http://localhost:8002/event/view", headers=headers, json=event_data)
+        self.assertEqual(res.status_code, 200)
+
+        event_data = {"user_id": "user_id", "post_id": "post_id", "comment_id": "comment_id"}
+        res = requests.post("http://localhost:8002/event/comment", headers=headers, json=event_data)
+        self.assertEqual(res.status_code, 200)
 
 unittest.main()
