@@ -2,3 +2,6 @@ Flask
 requests
 confluent-kafka
 psycopg2-binary
+grpcio
+grpcio-tools
+Flask-JWT-Extended

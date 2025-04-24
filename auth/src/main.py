@@ -33,7 +33,7 @@ def get_db_connection(max_retries=5, delay=2):
 
 
 
-conn_db = get_db_connection(max_retries=5, delay=5)
+conn_db = get_db_connection(max_retries=10, delay=2)
 
 @app.route('/signup', methods=["POST"])
 def register():
@@ -84,7 +84,7 @@ def login():
     cursor.execute("SELECT session_id FROM sessions_info WHERE user_id = %s", (user_id,))
     session_id = cursor.fetchone()['session_id']
     app.logger.info("session_id: %s", session_id)
-    token = create_access_token(identity=str(session_id))
+    token = create_access_token(identity=str(session_id) + "#" + str(user_id))
     cursor.close()
     return jsonify({"session_id": session_id, "user_id": info["user_id"], "access_token": token}), 200
 
@@ -92,8 +92,9 @@ def login():
 @jwt_required()
 def get_info():
     # app.logger.info("auth token: %s", request.headers["Authorization"])
-    session_id = get_jwt_identity()
-    app.logger.info("session id: %s", session_id)
+    session_id = get_jwt_identity().split("#")[0]
+
+    app.logger.info("get_info with session id: %s", session_id)
     cursor = conn_db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT user_id FROM sessions_info WHERE session_id = %s", (session_id,))
     info = cursor.fetchone()
@@ -112,7 +113,7 @@ def get_info():
 @app.route('/set_info', methods=["PUT"])
 @jwt_required()
 def set_info():
-    session_id = get_jwt_identity()
+    session_id = get_jwt_identity().split("#")[0]
     data = request.get_json()
     cursor = conn_db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT user_id FROM sessions_info WHERE session_id = %s", (session_id,))
@@ -138,7 +139,7 @@ def set_info():
 @app.route('/logout', methods=["POST"])
 @jwt_required()
 def logout():
-    session_id = get_jwt_identity()
+    session_id = get_jwt_identity().split("#")[0]
     data = request.get_json()
     cursor = conn_db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT user_id FROM sessions_info WHERE session_id = %s", (session_id,))
@@ -154,7 +155,7 @@ def logout():
 @app.route('/update', methods=["POST"])
 @jwt_required()
 def update_session():
-    session_id = get_jwt_identity()
+    session_id = get_jwt_identity().split("#")[0]
     cursor = conn_db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT user_id FROM sessions_info WHERE session_id = %s", (session_id,))
     info = cursor.fetchone()
