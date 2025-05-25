@@ -147,20 +147,53 @@ class TestPost(unittest.TestCase):
 class TestKafka(unittest.TestCase):
     def test_kafka_events(self):
         headers = requests.utils.default_headers()
-        event_data = {"user_id": "id", "date": "date"}
+
+        user_data = {"username" : id_generator(), "email": id_generator(), "password": id_generator()}
+        res = requests.post("http://localhost:8002/signup", headers=headers, json=user_data)
+        self.assertEqual(res.status_code, 200)
+        res = requests.post("http://localhost:8002/login", headers=headers, json=user_data)
+        self.assertEqual(res.status_code, 200)
+        access_token = json.loads(res.text)["response"]["access_token"]
+        user_id = json.loads(res.text)["response"]["user_id"]
+        headers.update(
+            {
+                "Authorization": f"Bearer {access_token}",
+            }
+        )
+        event_data = {"user_id": int(user_id), "date": "date"}
         res = requests.post("http://localhost:8002/event/user_registration", headers=headers, json=event_data)
         self.assertEqual(res.status_code, 200)
 
-        event_data = {"user_id": "user_id", "post_id": "post_id"}
+
+        post_json = {"title": id_generator(), "description": "...", "private_flag": False, "tags": ["Some"]}
+        res = requests.post("http://localhost:8002/post/create", headers=headers, json=post_json)
+        self.assertEqual(res.status_code, 200)
+        data = json.loads(res.text)
+
+        event_data = {"user_id": int(user_id), "post_id": int(data["response"]["post_id"])}
         res = requests.post("http://localhost:8002/event/like", headers=headers, json=event_data)
         self.assertEqual(res.status_code, 200)
 
-        event_data = {"user_id": "user_id", "post_id": "post_id"}
+        event_data = {"user_id": int(user_id), "post_id": int(data["response"]["post_id"])}
         res = requests.post("http://localhost:8002/event/view", headers=headers, json=event_data)
         self.assertEqual(res.status_code, 200)
 
         event_data = {"user_id": "user_id", "post_id": "post_id", "comment_id": "comment_id"}
         res = requests.post("http://localhost:8002/event/comment", headers=headers, json=event_data)
+        self.assertEqual(res.status_code, 500)
+    
+class TestStat(unittest.TestCase):
+    def test_stat(self):
+        headers = requests.utils.default_headers()
+        data = {"post_id": 17}
+        res = requests.get("http://localhost:8002/get_stat/like", headers=headers, json=data)
+        self.assertEqual(res.status_code, 200)
+        # self.assertEqual(json.loads(res.text)["response"]["like"], 0)
+        res = requests.get("http://localhost:8002/get_dynamic_stat/view", headers=headers, json=data)
+        self.assertEqual(res.status_code, 200)
+        print(json.loads(res.text)["response"])
+
+        res = requests.get("http://localhost:8002/get_top/posts/view", headers=headers, json={})
         self.assertEqual(res.status_code, 200)
 
 unittest.main()

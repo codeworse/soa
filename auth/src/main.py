@@ -173,4 +173,15 @@ def update_session():
     cursor.close()
     return jsonify({"session_id": session_id, "user_id": info["user_id"], "access_token": token}), 200
 
+@app.route('/check', methods=["GET"])
+def check_user():
+    cursor = conn_db.cursor()
+    data = request.get_json()
+    cursor.execute("SELECT 1 FROM logins_info WHERE user_id = %s", (data.get("user_id"),))
+    info = cursor.fetchone()
+    if int(info[0]) == 1:
+        return jsonify({"msg": "OK"}), 200
+    return jsonify({"msg": "User not found"}), 404
+
+
 app.run(host="0.0.0.0", debug=True)

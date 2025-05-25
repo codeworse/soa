@@ -6,50 +6,69 @@ service PostService {
     rpc update_post(update_post_req) returns (act_response) {}
     rpc get_post(post_id_info) returns (get_post_res) {}
     rpc get_post_list(page_info) returns (post_list) {}
+    rpc create_comment(create_comment_req) returns (comment_response) {}
+    rpc check_post(post_id_info) returns (act_response) {}
+    rpc check_comment(comment_id_info) returns (act_response) {}
 }
 
 message act_response {
-    int64 status = 1;
+    uint64 status = 1;
     string msg = 2;
-    int64 post_id = 3;
+    uint64 post_id = 3;
+}
+
+message comment_response {
+    uint64 status = 1;
+    string msg = 2;
+    uint64 comment_id = 3; 
+}
+
+message comment_id_info {
+    uint64 comment_id = 1;
 }
 
 message post_info {
     uint64 post_id = 1;
     string title = 2;
     string description = 3;
-    int64 author_id = 4;
+    uint64 author_id = 4;
     string created_at = 5;
     string updated_at = 6;
     bool private_flag = 7;
     repeated string tags = 8;
 }
 
+message create_comment_req {
+    uint64 post_id = 2;
+    string description = 3;
+    int64 author_id = 4;
+}
+
 message post_id_info {
-    int64 post_id = 1;
-    int64 user_id = 2;
+    uint64 post_id = 1;
+    uint64 user_id = 2;
 }
 
 message update_post_req {
-    int64 post_id = 1;
+    uint64 post_id = 1;
     string title = 2;
     string description = 3;
     bool private_flag = 4;
     repeated string tags = 5;
-    int64 user_id = 6;
+    uint64 user_id = 6;
 }
 
 message create_post_req {
     string title = 1;
     string description = 2;
-    int64 author_id = 3;
+    uint64 author_id = 3;
     bool private_flag = 4;
     repeated string tags = 5;
 }
 
 message get_post_res {
     optional post_info post = 1;
-    int64 status = 2;
+    uint64 status = 2;
     string msg = 3;
 }
 
@@ -58,8 +77,8 @@ message post_list {
 }
 
 message page_info {
-    int64 page_size = 1;
-    int64 page_count = 2;
-    int64 offset = 3;
-    int64 user_id = 4;
+    uint64 page_size = 1;
+    uint64 page_count = 2;
+    uint64 offset = 3;
+    uint64 user_id = 4;
 }
