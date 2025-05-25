@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS posts (
+    post_id SERIAL NOT NULL PRIMARY KEY,
+    title VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    author_id INT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    private_flag BOOLEAN NOT NULL,
+    tags TEXT
+);
