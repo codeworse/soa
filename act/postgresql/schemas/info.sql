@@ -8,3 +8,12 @@ CREATE TABLE IF NOT EXISTS posts (
     private_flag BOOLEAN NOT NULL,
     tags TEXT
 );
+
+CREATE TABLE IF NOT EXISTS comments (
+    comment_id SERIAL NOT NULL PRIMARY KEY,
+    post_id INT NOT NULL,
+    description TEXT NOT NULL,
+    author_id INT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);

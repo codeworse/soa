@@ -1,0 +1,37 @@
+syntax = "proto3";
+package stat;
+service StatService {
+    rpc get_info(post_id_info) returns (stat_info) {}
+    rpc get_dynamic_info(post_id_info) returns (dynamic_stat_info) {}
+    rpc get_top(sort_type) returns (top_rating) {}
+}
+
+message post_id_info {
+    uint64 post_id = 1;
+    string event_type = 2;
+}
+
+message stat_info {
+    uint64 views = 1;
+    uint64 likes = 2;
+    uint64 comments = 3;
+}
+
+message daily_stat {
+    string date = 1;
+    stat_info stat = 2;
+}
+
+message dynamic_stat_info {
+    repeated daily_stat stat = 1;
+}
+
+message sort_type {
+    string event_type = 1;
+    bool posts = 2;
+    int64 k = 3;
+}
+
+message top_rating {
+    repeated uint64 ids = 1;
+}

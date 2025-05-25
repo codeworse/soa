@@ -1,0 +1,7 @@
+Flask
+requests
+confluent-kafka
+clickhouse-driver
+clickhouse_connect
+grpcio
+grpcio-tools

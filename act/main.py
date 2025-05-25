@@ -179,7 +179,58 @@ class PostService(act_pb2_grpc.PostServiceServicer):
         return act_pb2.post_list(
             posts=out_posts
         )
-            
+
+    def create_comment(self, request, context):
+        post_id = request.post_id
+        description = str(request.description)
+        author_id = request.author_id
+        cursor = conn_db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            cursor.execute("INSERT INTO comments (post_id, description, author_id) VALUES (%s, %s, %s, %s) RETURNING comment_id", (comment_id, post_id, description, author_id))
+            cursor.commit()
+            info = cursor.fetchone()
+            cursor.close()
+            return act_pb2.comment_response(
+                status=200,
+                msg="OK",
+                comment_id=info['comment_id']
+            )
+        except:
+            cursor.close()
+            return act_pb2.act_response(
+                status=404,
+                msg="Comment already exists"
+            )
+    def check_post(self, request, context):
+        logging.info("start check")
+        post_id = request.post_id
+        cursor = conn_db.cursor()
+        cursor.execute("SELECT 1 FROM posts WHERE post_id = %s", (post_id,))
+        info = cursor.fetchone()
+        logging.info(f"check post {post_id} = {info}")
+        if int(info[0]) == 1:
+            return act_pb2.act_response(
+                status=200,
+                msg="OK"
+            )
+        logging.info(f"check post {post_id} = {info}")
+        return act_pb2.act_response(
+            status=404,
+            msg="Post not found"
+        )
+    def check_comment(self, request, context):
+        comment_id = request.comment_id
+        cursor = conn_db.cursor()
+        cursor.execute("SELECT 1 FROM comments WHERE comment_id = %s", (comment_id,))
+        if int(cursor.fetchone()[0]) == 1:
+            return act_pb2.act_response(
+                status=200,
+                msg="OK"
+            )
+        return act_pb2.act_response(
+            status=404,
+            msg="Comment not found"
+        )
 
 server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 act_pb2_grpc.add_PostServiceServicer_to_server(PostService(), server)

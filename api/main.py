@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, Response
 import requests
 import json
 from proto import act_pb2, act_pb2_grpc
+from proto import stat_pb2, stat_pb2_grpc
 import grpc
 import uuid
 from datetime import datetime
@@ -196,10 +197,33 @@ def get_post_list():
         out_json.append(post_to_dict(post))
     return jsonify(response=out_json), 200
 
+@app.route("/post/create_comment", methods=["POST"])
+@jwt_required
+def create_post_comment():
+    data = request.get_json()
+    user_id = int(get_jwt_identity().split("#")[1])
+    act_channel = grpc.insecure_channel("act_service:50051")
+    act_stub = act_pb2_grpc.PostServiceStub(act_channel)
+    res = act_stub.create_comment(act_pb2.create_comment_req(
+        post_id=data.get("post_id"),
+        description=data.get("description"),
+        author_id=user_id
+    ))
+    if res.status == 200:
+        return jsonify(response={"msg": res.msg, "comment_id": res.comment_id}), res.status
+    return jsonify(response={"msg": res.msg}), res.status_code
+
 @app.route('/event/user_registration', methods=["POST"])
 def registration_event():
     try:
         data = request.get_json()
+        res = requests.request(url='http://auth_service:5000/check',
+                           method="GET",
+                           headers={key: value for (key, value) in request.headers if key != 'Host'},
+                           data=request.get_data(),
+                           cookies=request.cookies)
+        if res.status_code != 200:
+            raise Exception("User not found")
         kafka_producer.send_registration(data.get("user_id"), data.get("date"))
     except:
         return jsonify(response="Some error"), 500
@@ -208,8 +232,16 @@ def registration_event():
 
 @app.route('/event/like', methods=["POST"])
 def like_event():
+    data = request.get_json()
+    act_channel = grpc.insecure_channel("act_service:50051")
+    act_stub = act_pb2_grpc.PostServiceStub(act_channel)
+    res = act_stub.check_post(act_pb2.post_id_info(
+        post_id=int(data.get("post_id")),
+        user_id=0
+    ))
     try:
-        data = request.get_json()
+        if res.status != 200:
+            raise Exception("Post not found")
         kafka_producer.send_like(data.get("user_id"), data.get("post_id"))
     except:
         return jsonify(response="Some error"), 500
@@ -219,6 +251,14 @@ def like_event():
 def view_event():
     try:
         data = request.get_json()
+        act_channel = grpc.insecure_channel("act_service:50051")
+        act_stub = act_pb2_grpc.PostServiceStub(act_channel)
+        res = act_stub.check_post(act_pb2.post_id_info(
+            post_id=int(data.get("post_id")),
+            user_id=0
+        ))
+        if res.status != 200:
+            raise Exception("Post not found")
         kafka_producer.send_view(data.get("user_id"), data.get("post_id"))
     except:
         return jsonify(response="Some error"), 500
@@ -228,9 +268,77 @@ def view_event():
 def comment_event():
     try:
         data = request.get_json()
+        act_channel = grpc.insecure_channel("act_service:50051")
+        act_stub = act_pb2_grpc.PostServiceStub(act_channel)
+        res = act_stub.check_post(act_pb2.post_id_info(
+            post_id=int(data.get("post_id")),
+            user_id=0
+        ))
+        if res.status != 200:
+            raise Exception("Post not found")    
+        res = act_stub.check_comment(act_pb2.check_comment_req(
+            comment_id=int(data.get("comment_id"))
+        ))
+        if res.status != 200:
+            raise Exception("Comment not found") 
         kafka_producer.send_comment(data.get("user_id"), data.get("post_id"), data.get("comment_id"))
     except:
         return jsonify(response="Some error"), 500
     return jsonify(response="OK"), 200
 
+@app.route('/get_stat/<event_type>', methods=["GET"])
+def get_stat(event_type):
+    data = request.get_json()
+    stat_channel = grpc.insecure_channel("stat_service:50051")
+    stat_stub = stat_pb2_grpc.StatServiceStub(stat_channel)
+    res = stat_stub.get_info(stat_pb2.post_id_info(
+        post_id = int(data.get("post_id")),
+        event_type=str(event_type)
+    ))
+    ans = 0
+    if event_type == "view":
+        ans = res.views
+    elif event_type == "like":
+        ans = res.likes
+    else:
+        ans = res.comments
+    return jsonify(response={event_type: ans}), 200
+
+@app.route('/get_dynamic_stat/<event_type>', methods=["GET"])
+def get_dynamic_stat(event_type):
+    data = request.get_json()
+    stat_channel = grpc.insecure_channel("stat_service:50051")
+    stat_stub = stat_pb2_grpc.StatServiceStub(stat_channel)
+    res = stat_stub.get_dynamic_info(stat_pb2.post_id_info(
+        post_id = int(data.get("post_id")),
+        event_type=str(event_type)
+    ))
+    ans = []
+    for stat in res.stat:
+        date = str(stat.date)
+        value = 0
+        if event_type == "view":
+            value = stat.stat.views
+        elif event_type == "like":
+            value = stat.stat.likes
+        else:
+            value = res.comments
+        ans.append({"date": date, "stat": value})
+    return jsonify(response=ans), 200
+
+@app.route('/get_top/<sort_type>/<event_type>', methods=["GET"])
+def get_top(sort_type, event_type):    
+    stat_channel = grpc.insecure_channel("stat_service:50051")
+    stat_stub = stat_pb2_grpc.StatServiceStub(stat_channel)
+    sort_posts = False
+    if sort_type == "posts":
+        sort_posts = True
+    res = stat_stub.get_top(stat_pb2.sort_type(
+        event_type=event_type,
+        posts=sort_posts
+    ))
+    result_ids = []
+    for i in res.ids:
+        result_ids.append(i)
+    return jsonify(response=result_ids), 200
 app.run(host="0.0.0.0", debug=True)

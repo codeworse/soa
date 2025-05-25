@@ -146,6 +146,41 @@ services:
       - 8082:8080
     environment:
       DYNAMIC_CONFIG_ENABLED: true
+  
+  clickhouse-server:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: clickhouse-server
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./clickhouse_data:/var/lib/clickhouse
+      - ./stat/configs:/etc/clickhouse-server
+      - ./stat/info.sql:/docker-entrypoint-initdb.d/info.sql
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  stat:
+    build:
+      context: stat
+      dockerfile: Dockerfile
+    container_name: stat_service
+    environment:
+      SERVER_HOST: "0.0.0.0"
+    ports:
+      - "8005:5000"
 volumes:
   auth_pgdata:
   act_pgdata:
